@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IdoSell Image Cropper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.2em;
+        }
+
+        .sku-section {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .sku-input {
+            padding: 12px 20px;
+            font-size: 18px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            width: 300px;
+            text-align: center;
+            transition: border-color 0.3s;
+        }
+
+        .sku-input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .upload-section {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .upload-area {
+            border: 3px dashed #ddd;
+            border-radius: 12px;
+            padding: 40px;
+            background: #fafafa;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #007bff;
+            background: #f0f8ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #28a745;
+            background: #f0fff0;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-text {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            font-size: 14px;
+            color: #999;
+        }
+
+        .info-section {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .info-text {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .editor-section {
+            margin-bottom: 40px;
+        }
+
+        .image-editor {
+            margin-bottom: 30px;
+            margin-top: 50px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: visible;
+            background: #f9f9f9;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .image-editor.selected {
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
+        .editor-header {
+            background: #333;
+            color: white;
+            padding: 10px 20px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: absolute;
+            top: -40px;
+            left: 0;
+            right: 0;
+            border-radius: 8px 8px 0 0;
+            z-index: 10;
+        }
+
+        .editor-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .order-controls {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            transition: background 0.3s;
+        }
+
+        .btn-small:hover:not(:disabled) {
+            background: #0056b3;
+        }
+
+        .btn-small:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-small.reset {
+            background: #6c757d;
+        }
+
+        .btn-small.reset:hover {
+            background: #545b62;
+        }
+
+        .btn-small.move {
+            background: #17a2b8;
+            padding: 5px 8px;
+        }
+
+        .btn-small.move:hover:not(:disabled) {
+            background: #138496;
+        }
+
+        .crop-container {
+            position: relative;
+            width: 1350px;
+            height: 688px;
+            overflow: hidden;
+            background: #000;
+            margin: 0 auto;
+            cursor: move;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .crop-image {
+            position: absolute;
+            max-width: none;
+            max-height: none;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+
+        .zoom-controls {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .zoom-level {
+            font-size: 14px;
+            color: #666;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-width: 150px;
+        }
+
+        .btn-primary {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .progress {
+            margin: 20px 0;
+            text-align: center;
+            font-size: 18px;
+            color: #007bff;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .crop-container {
+                width: 100%;
+                max-width: 675px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+	
+    <div class="container">
+	<img src="https://purles.pl/wp-content/uploads/2022/04/logo.png" alt="Purles Logo" class="logo" height="50px" align="center">
+        <h1>IdoSell Image Cropper</h1>
+        
+        <div class="sku-section">
+            <input type="text" id="skuInput" class="sku-input" placeholder="Wpisz SKU produktu" maxlength="50">
+        </div>
+
+        <div class="upload-section">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-text">Przeciągnij 3 zdjęcia tutaj lub kliknij aby wybrać</div>
+                <div class="upload-hint">Obsługiwane formaty: JPG, PNG (maksymalnie 3 pliki)</div>
+            </div>
+            <input type="file" id="fileInput" class="file-input" multiple accept="image/*">
+        </div>
+
+        <div class="info-section">
+            <div class="info-text">
+                🖼️ Wymiary docelowe: 1350x688 | 📸 Jakość: 95% | 🖱️ Użyj scrolla myszy do powiększania
+            </div>
+        </div>
+
+        <div class="editor-section" id="editorSection">
+            <!-- Edytory będą generowane dynamicznie -->
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-primary" id="saveAllBtn" disabled>
+                💾 Zapisz wszystkie zdjęcia
+            </button>
+            <button class="btn btn-secondary" id="clearAllBtn">
+                🔄 Wyczyść i zacznij od nowa
+            </button>
+        </div>
+
+        <div class="progress hidden" id="progress">
+            Zapisywanie zdjęć...
+        </div>
+    </div>
+   <p style="text-align: center; color: #8B5CF6;">
+ Designed by KS for <strong><a href="https://www.purles.pl" style="color: #8B5CF6; text-decoration: none;">Purlés</a></strong>
+    <script>
+        class ImageCropper {
+            constructor() {
+                this.images = [];
+                this.targetWidth = 1350;
+                this.targetHeight = 688;
+                this.quality = 0.95;
+                this.isDragging = false;
+                this.dragData = {};
+                
+                this.initializeElements();
+                this.bindEvents();
+            }
+
+            initializeElements() {
+                this.skuInput = document.getElementById('skuInput');
+                this.uploadArea = document.getElementById('uploadArea');
+                this.fileInput = document.getElementById('fileInput');
+                this.editorSection = document.getElementById('editorSection');
+                this.saveAllBtn = document.getElementById('saveAllBtn');
+                this.clearAllBtn = document.getElementById('clearAllBtn');
+                this.progress = document.getElementById('progress');
+            }
+
+            bindEvents() {
+                // Upload events
+                this.uploadArea.addEventListener('click', () => this.fileInput.click());
+                this.uploadArea.addEventListener('dragover', this.handleDragOver.bind(this));
+                this.uploadArea.addEventListener('dragleave', this.handleDragLeave.bind(this));
+                this.uploadArea.addEventListener('drop', this.handleDrop.bind(this));
+                this.fileInput.addEventListener('change', this.handleFileSelect.bind(this));
+
+                // Control events
+                this.saveAllBtn.addEventListener('click', this.saveAllImages.bind(this));
+                this.clearAllBtn.addEventListener('click', this.clearAll.bind(this));
+                
+                // SKU input
+                this.skuInput.addEventListener('input', () => this.updateSaveButton());
+                
+                // Global mouse events
+                document.addEventListener('mousemove', this.handleDrag.bind(this));
+                document.addEventListener('mouseup', this.endDrag.bind(this));
+            }
+
+            handleDragOver(e) {
+                e.preventDefault();
+                this.uploadArea.classList.add('dragover');
+            }
+
+            handleDragLeave(e) {
+                e.preventDefault();
+                this.uploadArea.classList.remove('dragover');
+            }
+
+            handleDrop(e) {
+                e.preventDefault();
+                this.uploadArea.classList.remove('dragover');
+                const files = Array.from(e.dataTransfer.files).slice(0, 3);
+                this.processFiles(files);
+            }
+
+            handleFileSelect(e) {
+                const files = Array.from(e.target.files).slice(0, 3);
+                this.processFiles(files);
+            }
+
+            async processFiles(files) {
+                if (files.length === 0) return;
+                
+                this.images = [];
+                this.editorSection.innerHTML = '';
+                
+                // Load all images
+                const loadPromises = files.map((file, index) => this.loadImage(file, index));
+                await Promise.all(loadPromises);
+                
+                // Render editors
+                this.renderAllEditors();
+            }
+
+            loadImage(file, index) {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const imageData = {
+                                src: e.target.result,
+                                file: file,
+                                element: img,
+                                offsetX: 0,
+                                offsetY: 0,
+                                zoom: 1,
+                                originalWidth: img.width,
+                                originalHeight: img.height
+                            };
+                            
+                            this.images[index] = imageData;
+                            resolve();
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            renderAllEditors() {
+                this.editorSection.innerHTML = '';
+                this.images.forEach((imageData, index) => {
+                    if (imageData) {
+                        this.createEditor(imageData, index);
+                    }
+                });
+                this.updateSaveButton();
+            }
+
+            createEditor(imageData, index) {
+                const moveUpDisabled = index === 0 ? 'disabled' : '';
+                const moveDownDisabled = index === this.images.length - 1 ? 'disabled' : '';
+                
+                const editorHtml = `
+                    <div class="image-editor" data-index="${index}">
+                        <div class="editor-header">
+                            <span>Zdjęcie ${index + 1}</span>
+                            <div class="editor-controls">
+                                <div class="order-controls">
+                                    <button class="btn-small move" data-index="${index}" data-direction="up" ${moveUpDisabled}>↑</button>
+                                    <button class="btn-small move" data-index="${index}" data-direction="down" ${moveDownDisabled}>↓</button>
+                                </div>
+                                <button class="btn-small zoom-out" data-index="${index}">-</button>
+                                <button class="btn-small zoom-in" data-index="${index}">+</button>
+                                <button class="btn-small reset" data-index="${index}">Reset</button>
+                            </div>
+                        </div>
+                        <div class="crop-container" data-index="${index}">
+                            <img class="crop-image" src="${imageData.src}" data-index="${index}">
+                        </div>
+                        <div class="zoom-controls">
+                            <span class="zoom-level" data-index="${index}">100%</span>
+                        </div>
+                    </div>
+                `;
+                
+                this.editorSection.insertAdjacentHTML('beforeend', editorHtml);
+                
+                // Get elements
+                const editor = this.editorSection.lastElementChild;
+                const container = editor.querySelector('.crop-container');
+                const img = editor.querySelector('.crop-image');
+                const zoomIn = editor.querySelector('.zoom-in');
+                const zoomOut = editor.querySelector('.zoom-out');
+                const reset = editor.querySelector('.reset');
+                const moveButtons = editor.querySelectorAll('.move');
+                
+                // Bind events
+                container.addEventListener('mousedown', this.startDrag.bind(this));
+                container.addEventListener('wheel', this.handleWheel.bind(this), { passive: false });
+                
+                zoomIn.addEventListener('click', () => this.zoomImage(index, 0.01));
+                zoomOut.addEventListener('click', () => this.zoomImage(index, -0.01));
+                reset.addEventListener('click', () => this.resetImage(index));
+                
+                moveButtons.forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const direction = e.target.dataset.direction;
+                        this.moveImage(index, direction);
+                    });
+                });
+                
+                // Click to select
+                editor.addEventListener('click', () => this.selectEditor(index));
+                
+                // Initialize image position
+                setTimeout(() => this.centerImage(index), 50);
+            }
+
+            selectEditor(index) {
+                document.querySelectorAll('.image-editor').forEach(editor => {
+                    editor.classList.remove('selected');
+                });
+                const editor = document.querySelector(`.image-editor[data-index="${index}"]`);
+                editor.classList.add('selected');
+            }
+
+            moveImage(index, direction) {
+                let newIndex;
+                
+                if (direction === 'up' && index > 0) {
+                    newIndex = index - 1;
+                } else if (direction === 'down' && index < this.images.length - 1) {
+                    newIndex = index + 1;
+                } else {
+                    return;
+                }
+                
+                // Swap images
+                [this.images[index], this.images[newIndex]] = 
+                [this.images[newIndex], this.images[index]];
+                
+                // Re-render
+                this.renderAllEditors();
+                this.selectEditor(newIndex);
+            }
+
+            centerImage(index) {
+                const imageData = this.images[index];
+                if (!imageData) return;
+                
+                // Calculate scale to fit container while maintaining aspect ratio
+                const scaleX = this.targetWidth / imageData.originalWidth;
+                const scaleY = this.targetHeight / imageData.originalHeight;
+                
+                // Use the larger scale to ensure image fills the container
+                imageData.zoom = Math.max(scaleX, scaleY);
+                
+                // Calculate centered position
+                const scaledWidth = imageData.originalWidth * imageData.zoom;
+                const scaledHeight = imageData.originalHeight * imageData.zoom;
+                
+                let x = (this.targetWidth - scaledWidth) / 2;
+                let y = (this.targetHeight - scaledHeight) / 2;
+                
+                // Apply snap to edge to ensure no black borders
+                const snapPosition = this.snapToEdge(index, x, y);
+                imageData.offsetX = snapPosition.x;
+                imageData.offsetY = snapPosition.y;
+                
+                this.updateImageTransform(index);
+                this.updateZoomDisplay(index);
+            }
+
+            handleWheel(e) {
+                e.preventDefault();
+                const index = parseInt(e.currentTarget.dataset.index);
+                
+                // Calculate zoom delta based on wheel direction
+                const delta = e.deltaY > 0 ? -0.03 : 0.03;
+                
+                // Get mouse position relative to container
+                const rect = e.currentTarget.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                this.zoomImageAtPoint(index, delta, mouseX, mouseY);
+            }
+
+            zoomImageAtPoint(index, delta, mouseX, mouseY) {
+                const imageData = this.images[index];
+                if (!imageData) return;
+                
+                const oldZoom = imageData.zoom;
+                const newZoom = Math.max(0.1, Math.min(5, oldZoom + delta));
+                
+                if (newZoom === oldZoom) return;
+                
+                const zoomRatio = newZoom / oldZoom;
+                
+                // Calculate new position
+                let newX = mouseX - (mouseX - imageData.offsetX) * zoomRatio;
+                let newY = mouseY - (mouseY - imageData.offsetY) * zoomRatio;
+                
+                imageData.zoom = newZoom;
+                
+                // Apply snap to edge after zoom
+                const snapPosition = this.snapToEdge(index, newX, newY);
+                imageData.offsetX = snapPosition.x;
+                imageData.offsetY = snapPosition.y;
+                
+                this.updateImageTransform(index);
+                this.updateZoomDisplay(index);
+            }
+
+            startDrag(e) {
+                // Only start drag if clicking on the image
+                if (!e.target.classList.contains('crop-image')) return;
+                
+                e.preventDefault();
+                const index = parseInt(e.currentTarget.dataset.index);
+                
+                this.isDragging = true;
+                this.dragData = {
+                    index: index,
+                    startX: e.clientX - this.images[index].offsetX,
+                    startY: e.clientY - this.images[index].offsetY
+                };
+                
+                e.currentTarget.style.cursor = 'grabbing';
+            }
+
+            snapToEdge(index, x, y) {
+                const imageData = this.images[index];
+                const scaledWidth = imageData.originalWidth * imageData.zoom;
+                const scaledHeight = imageData.originalHeight * imageData.zoom;
+                
+                const snapThreshold = 15; // Pixels from edge to trigger snap
+                
+                // Calculate edges
+                const leftEdge = 0;
+                const rightEdge = this.targetWidth - scaledWidth;
+                const topEdge = 0;
+                const bottomEdge = this.targetHeight - scaledHeight;
+                
+                let snappedX = x;
+                let snappedY = y;
+                
+                // Snap to left/right edges
+                if (Math.abs(x - leftEdge) < snapThreshold && x <= leftEdge) {
+                    snappedX = leftEdge;
+                } else if (Math.abs(x - rightEdge) < snapThreshold && x >= rightEdge) {
+                    snappedX = rightEdge;
+                }
+                
+                // Snap to top/bottom edges
+                if (Math.abs(y - topEdge) < snapThreshold && y <= topEdge) {
+                    snappedY = topEdge;
+                } else if (Math.abs(y - bottomEdge) < snapThreshold && y >= bottomEdge) {
+                    snappedY = bottomEdge;
+                }
+                
+                // Prevent image from being dragged too far (leaving black space)
+                if (scaledWidth >= this.targetWidth) {
+                    // Image is wider than container - don't allow black bars on sides
+                    snappedX = Math.min(0, Math.max(rightEdge, snappedX));
+                } else {
+                    // Image is narrower - keep it within bounds
+                    snappedX = Math.max(0, Math.min(rightEdge, snappedX));
+                }
+                
+                if (scaledHeight >= this.targetHeight) {
+                    // Image is taller than container - don't allow black bars on top/bottom
+                    snappedY = Math.min(0, Math.max(bottomEdge, snappedY));
+                } else {
+                    // Image is shorter - keep it within bounds
+                    snappedY = Math.max(0, Math.min(bottomEdge, snappedY));
+                }
+                
+                return { x: snappedX, y: snappedY };
+            }
+
+            handleDrag(e) {
+                if (!this.isDragging) return;
+                
+                const index = this.dragData.index;
+                const imageData = this.images[index];
+                
+                // Calculate new position
+                let newX = e.clientX - this.dragData.startX;
+                let newY = e.clientY - this.dragData.startY;
+                
+                // Apply snap to edge
+                const snapPosition = this.snapToEdge(index, newX, newY);
+                imageData.offsetX = snapPosition.x;
+                imageData.offsetY = snapPosition.y;
+                
+                this.updateImageTransform(index);
+            }
+
+            endDrag() {
+                if (this.isDragging) {
+                    this.isDragging = false;
+                    const container = document.querySelector(`[data-index="${this.dragData.index}"].crop-container`);
+                    if (container) {
+                        container.style.cursor = 'move';
+                    }
+                }
+            }
+
+            zoomImage(index, delta) {
+                const centerX = this.targetWidth / 2;
+                const centerY = this.targetHeight / 2;
+                this.zoomImageAtPoint(index, delta, centerX, centerY);
+            }
+
+            resetImage(index) {
+                this.centerImage(index);
+            }
+
+            updateImageTransform(index) {
+                const imageData = this.images[index];
+                if (!imageData) return;
+                
+                const img = document.querySelector(`[data-index="${index}"].crop-image`);
+                if (!img) return;
+                
+                const scaledWidth = imageData.originalWidth * imageData.zoom;
+                const scaledHeight = imageData.originalHeight * imageData.zoom;
+                
+                img.style.width = scaledWidth + 'px';
+                img.style.height = scaledHeight + 'px';
+                img.style.left = imageData.offsetX + 'px';
+                img.style.top = imageData.offsetY + 'px';
+            }
+
+            updateZoomDisplay(index) {
+                const zoomLevel = document.querySelector(`[data-index="${index}"].zoom-level`);
+                if (!zoomLevel || !this.images[index]) return;
+                
+                zoomLevel.textContent = Math.round(this.images[index].zoom * 100) + '%';
+            }
+
+            updateSaveButton() {
+                const hasImages = this.images.length > 0 && this.images.every(img => img);
+                const hasSku = this.skuInput.value.trim().length > 0;
+                this.saveAllBtn.disabled = !(hasImages && hasSku);
+            }
+
+            async saveAllImages() {
+                const sku = this.skuInput.value.trim();
+                if (!sku) {
+                    alert('Wprowadź SKU produktu');
+                    return;
+                }
+
+                this.progress.classList.remove('hidden');
+                this.saveAllBtn.disabled = true;
+
+                for (let i = 0; i < this.images.length; i++) {
+                    await this.saveImage(i, `${sku}_${i + 1}`);
+                }
+
+                this.progress.classList.add('hidden');
+                this.saveAllBtn.disabled = false;
+                alert(`Zapisano ${this.images.length} zdjęć!`);
+            }
+
+            async saveImage(index, filename) {
+                const imageData = this.images[index];
+                if (!imageData) return;
+
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                canvas.width = this.targetWidth;
+                canvas.height = this.targetHeight;
+                
+                // Fill with black background
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Calculate dimensions
+                const scaledWidth = imageData.originalWidth * imageData.zoom;
+                const scaledHeight = imageData.originalHeight * imageData.zoom;
+                
+                // Draw the image
+                ctx.drawImage(
+                    imageData.element,
+                    0, 0, imageData.originalWidth, imageData.originalHeight,
+                    imageData.offsetX, imageData.offsetY, scaledWidth, scaledHeight
+                );
+                
+                // Convert to blob and download
+                return new Promise((resolve) => {
+                    canvas.toBlob((blob) => {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${filename}.jpg`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        resolve();
+                    }, 'image/jpeg', this.quality);
+                });
+            }
+
+            clearAll() {
+                if (confirm('Czy na pewno chcesz wyczyścić wszystko i zacząć od nowa?')) {
+                    this.images = [];
+                    this.editorSection.innerHTML = '';
+                    this.fileInput.value = '';
+                    this.skuInput.value = '';
+                    this.updateSaveButton();
+                    
+                    setTimeout(() => {
+                        this.skuInput.focus();
+                    }, 100);
+                }
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            new ImageCropper();
+        });
+    </script>
+</body>
+</html>
