@@ -192,8 +192,8 @@
 
         .crop-container {
             position: relative;
-            width: 1350px;
-            height: 688px;
+            width: 675px;
+            height: 344px;
             overflow: hidden;
             background: #000;
             margin: 0 auto;
@@ -287,7 +287,7 @@
             
             .crop-container {
                 width: 100%;
-                max-width: 675px;
+                max-width: 337px;
             }
             
             .action-buttons {
@@ -344,6 +344,10 @@
         class ImageCropper {
             constructor() {
                 this.images = [];
+                // Wymiary podglądu (do wyświetlania) - 50% wielkości docelowej
+                this.previewWidth = 675;
+                this.previewHeight = 344;
+                // Wymiary docelowe (do zapisu)
                 this.targetWidth = 1350;
                 this.targetHeight = 688;
                 this.quality = 0.95;
@@ -548,21 +552,21 @@
                 const imageData = this.images[index];
                 if (!imageData) return;
                 
-                // Calculate scale to fit container while maintaining aspect ratio
-                const scaleX = this.targetWidth / imageData.originalWidth;
-                const scaleY = this.targetHeight / imageData.originalHeight;
+                // Calculate scale to fit preview container while maintaining aspect ratio
+                const scaleX = this.previewWidth / imageData.originalWidth;
+                const scaleY = this.previewHeight / imageData.originalHeight;
                 
-                // Use the larger scale to ensure image fills the container
+                // Use the larger scale to ensure image fills the preview container
                 imageData.zoom = Math.max(scaleX, scaleY);
                 
-                // Calculate centered position
+                // Calculate centered position for preview
                 const scaledWidth = imageData.originalWidth * imageData.zoom;
                 const scaledHeight = imageData.originalHeight * imageData.zoom;
                 
-                let x = (this.targetWidth - scaledWidth) / 2;
-                let y = (this.targetHeight - scaledHeight) / 2;
+                let x = (this.previewWidth - scaledWidth) / 2;
+                let y = (this.previewHeight - scaledHeight) / 2;
                 
-                // Apply snap to edge to ensure no black borders
+                // Apply snap to edge to ensure no black borders in preview
                 const snapPosition = this.snapToEdge(index, x, y);
                 imageData.offsetX = snapPosition.x;
                 imageData.offsetY = snapPosition.y;
@@ -636,11 +640,11 @@
                 
                 const snapThreshold = 15; // Pixels from edge to trigger snap
                 
-                // Calculate edges
+                // Calculate edges based on preview dimensions
                 const leftEdge = 0;
-                const rightEdge = this.targetWidth - scaledWidth;
+                const rightEdge = this.previewWidth - scaledWidth;
                 const topEdge = 0;
-                const bottomEdge = this.targetHeight - scaledHeight;
+                const bottomEdge = this.previewHeight - scaledHeight;
                 
                 let snappedX = x;
                 let snappedY = y;
@@ -660,16 +664,16 @@
                 }
                 
                 // Prevent image from being dragged too far (leaving black space)
-                if (scaledWidth >= this.targetWidth) {
-                    // Image is wider than container - don't allow black bars on sides
+                if (scaledWidth >= this.previewWidth) {
+                    // Image is wider than preview container - don't allow black bars on sides
                     snappedX = Math.min(0, Math.max(rightEdge, snappedX));
                 } else {
                     // Image is narrower - keep it within bounds
                     snappedX = Math.max(0, Math.min(rightEdge, snappedX));
                 }
                 
-                if (scaledHeight >= this.targetHeight) {
-                    // Image is taller than container - don't allow black bars on top/bottom
+                if (scaledHeight >= this.previewHeight) {
+                    // Image is taller than preview container - don't allow black bars on top/bottom
                     snappedY = Math.min(0, Math.max(bottomEdge, snappedY));
                 } else {
                     // Image is shorter - keep it within bounds
@@ -708,8 +712,8 @@
             }
 
             zoomImage(index, delta) {
-                const centerX = this.targetWidth / 2;
-                const centerY = this.targetHeight / 2;
+                const centerX = this.previewWidth / 2;
+                const centerY = this.previewHeight / 2;
                 this.zoomImageAtPoint(index, delta, centerX, centerY);
             }
 
@@ -762,7 +766,7 @@
 
                 this.progress.classList.add('hidden');
                 this.saveAllBtn.disabled = false;
-                alert(`Zapisano ${this.images.length} zdjęć!`);
+                alert(`Zapisano ${this.images.length} zdjęć w rozdzielczości ${this.targetWidth}x${this.targetHeight}!`);
             }
 
             async saveImage(index, filename) {
@@ -772,6 +776,7 @@
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 
+                // Set target dimensions for save (2x preview size)
                 canvas.width = this.targetWidth;
                 canvas.height = this.targetHeight;
                 
@@ -779,15 +784,21 @@
                 ctx.fillStyle = '#000000';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 
-                // Calculate dimensions
-                const scaledWidth = imageData.originalWidth * imageData.zoom;
-                const scaledHeight = imageData.originalHeight * imageData.zoom;
+                // Calculate scale factor from preview to target (2x)
+                const scaleFactorX = this.targetWidth / this.previewWidth;  // 1350/675 = 2
+                const scaleFactorY = this.targetHeight / this.previewHeight; // 688/344 = 2
                 
-                // Draw the image
+                // Scale all dimensions for target resolution
+                const targetScaledWidth = (imageData.originalWidth * imageData.zoom) * scaleFactorX;
+                const targetScaledHeight = (imageData.originalHeight * imageData.zoom) * scaleFactorY;
+                const targetOffsetX = imageData.offsetX * scaleFactorX;
+                const targetOffsetY = imageData.offsetY * scaleFactorY;
+                
+                // Draw the image at target resolution
                 ctx.drawImage(
                     imageData.element,
                     0, 0, imageData.originalWidth, imageData.originalHeight,
-                    imageData.offsetX, imageData.offsetY, scaledWidth, scaledHeight
+                    targetOffsetX, targetOffsetY, targetScaledWidth, targetScaledHeight
                 );
                 
                 // Convert to blob and download
